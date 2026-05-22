@@ -1,3 +1,5 @@
+I had Claude push for me so this is stuff it said down here 
+
 
 ⏺ Everything is clean. Here's the full pipeline:
 
