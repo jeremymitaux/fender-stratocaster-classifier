@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# OS
+.DS_Store
+
+# Claude local settings
+.claude/settings.local.json
+
+# Scraped image dataset (not committed; see README for how to regenerate)
+data/
