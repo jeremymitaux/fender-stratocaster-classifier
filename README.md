@@ -1,31 +1,15 @@
+Intro to Deep Learning Project Proposal
+Fill out the following sections try to limit your full proposal to around 300 words.
 
-⏺ Everything is clean. Here's the full pipeline:
+Name: Jeremy Mitaux 
+Project Title: Visual Identification of Vintage Electric Guitars
 
-  ---
-  What was built
 
-  3 scripts, run in order:
-
-  1. python prepare_dataset.py
-
-  Downloads ~770 images into data/images_labeled/american|mexican|japanese/. Labels are extracted from title + model + description using keyword
-  matching. 302 listings labeled (198 dropped as ambiguous), estimated ~3 min to download.
-
-  2. python train.py
-
-  - Model: EfficientNet-B0 pretrained on ImageNet, last layer replaced for 3 classes
-  - Split: 70/15/15 stratified train/val/test
-  - Imbalance fix: WeightedRandomSampler so American (171) doesn't dominate Mexican (60) and Japanese (71)
-  - Augmentation: random flip, color jitter, rotation
-  - Scheduler: cosine annealing LR over 20 epochs
-  - Device: auto-detects MPS (you have Apple Silicon)
-  - Saves models/best_model.pt + results/confusion_matrix.png + training curves
-
-  3. python inference.py guitar.jpg
-
-  Loads best checkpoint, prints prediction + probability bar for each class.
-
-  ---
-  Start with:
-  python prepare_dataset.py   # ~3 min download
-  python train.py             # ~15-30 min on MPS
+1. What problem will you be investigating? Why is it interesting to you?
+I am looking to train a deep learning model that identifies the make, model, and approximate production year of an electric guitar from a photograph (probably going to narrow this down to just Fender guitars). A model that could quickly detect whether a guitar is a 1963 Stratocaster when many listings might just say “Fender Strat” would be extremely useful. The problem interest me because I’ve been thinking for a while to leverage AI/OpenClaw to have an AI agent web scrap listings of guitars for me so I can try to flip guitars. 
+2. What dataset will you use, and how will you get it? 
+My plan is to use Reverb’s API to get a bunch of current listings. Reverb is the largest online marketplace for used musical instruments, and listing include multiple photos along with make, model, and often year metadata. I plan to collect thousands of listings spanning multiple decades for my model to train on.
+3. Have people worked on this problem or similar ones before, if so what are you trying to do that's different? 
+I’ve been seeing a lot of Twitter posts about people working on models for looking through craiglists and facebook marketplace to find good listing for arbitrate opportunities essentially. But I haven’t seen anything related specifically to guitars. I hope that combining my niche interest in guitars/music along with my programming experience, I can create a solid model to help in buy/selling guitars. 
+4. How will you evaluate whether your model works or not
+I’ll evaluate my model on how well is accurately ascribes a model to a guitar based on the photo. 
