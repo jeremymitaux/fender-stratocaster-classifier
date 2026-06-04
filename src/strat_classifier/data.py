@@ -1,23 +1,28 @@
-"""Dataset and DataLoader construction for the Stratocaster origin classifier.
+"""Dataset and DataLoader construction for the guitar make/model classifier.
 
-Images are expected on disk as an ``ImageFolder`` tree::
+Images are expected on disk as an ``ImageFolder`` tree, one folder per model::
 
     data/images_labeled/
-        american/  *.jpg *.jpeg *.png
-        japanese/  ...
-        mexican/   ...
+        stratocaster/  <listing_id>_<idx>.jpg ...
+        telecaster/    ...
+        les_paul/      ...
 
-The public entry point is :func:`make_dataloaders`, which returns stratified
-train/val/test loaders plus the class-name list. Training uses a
-``WeightedRandomSampler`` to compensate for class imbalance (American listings
-outnumber Mexican and Japanese ones).
+The public entry point is :func:`make_dataloaders`, which returns
+**group-aware**, stratified train/val/test loaders plus the class-name list.
+
+Every image filename is ``<listing_id>_<idx>.<ext>`` (written by
+``scraping.prepare``), so multiple photos of the *same* listing share a
+``listing_id`` prefix. The split groups on that id — all images of one listing
+land in a single split — which prevents near-duplicate photos of one guitar
+leaking across train/val/test and inflating accuracy. Training also uses a
+``WeightedRandomSampler`` to compensate for residual class imbalance.
 """
 
-from collections import Counter
+import random
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import torch
-from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 from torchvision import datasets, transforms
 
@@ -53,7 +58,18 @@ def build_transforms(img_size: int = IMG_SIZE):
     return train_tf, eval_tf
 
 
-# --- Stratified splits -----------------------------------------------------
+# --- Group-aware stratified splits -----------------------------------------
+def listing_id(path: str) -> str:
+    """Group key for an image: the ``<listing_id>`` from ``<listing_id>_<idx>.<ext>``.
+
+    Filenames are written by ``scraping.prepare`` as ``{listing_id}_{idx}.{ext}``.
+    Reverb ids are numeric, but rsplit on the *last* ``_`` is robust even if an
+    id ever contained one. Falls back to the whole stem if there is no ``_``.
+    """
+    stem = Path(path).stem
+    return stem.rsplit("_", 1)[0] if "_" in stem else stem
+
+
 def build_splits(
     data_dir: Path = DEFAULT_DATA_DIR,
     img_size: int = IMG_SIZE,
@@ -61,11 +77,14 @@ def build_splits(
     test_split: float = 0.15,
     seed: int = 42,
 ):
-    """Build stratified train/val/test ``Subset``s and the class-name list.
+    """Build group-aware, stratified train/val/test ``Subset``s + class names.
 
     Train uses augmenting transforms; val/test use deterministic eval
-    transforms. Splits are stratified on the class label so each split keeps
-    the same american/japanese/mexican proportions.
+    transforms. The split is performed over **listings** (grouped on the
+    ``listing_id`` filename prefix), not individual images, so every photo of a
+    given guitar stays in one split. Within each class, listings are shuffled
+    and partitioned by the requested fractions, which keeps the per-split class
+    proportions close to the overall distribution (stratification).
     """
     data_dir = Path(data_dir)
     if not data_dir.exists():
@@ -78,19 +97,47 @@ def build_splits(
     train_tf, eval_tf = build_transforms(img_size)
     train_base = datasets.ImageFolder(str(data_dir), transform=train_tf)
     eval_base = datasets.ImageFolder(str(data_dir), transform=eval_tf)
-    targets = [label for _, label in train_base.samples]
 
-    idx = list(range(len(train_base)))
-    idx_trainval, idx_test = train_test_split(
-        idx, test_size=test_split, stratify=targets, random_state=seed
-    )
-    targets_trainval = [targets[i] for i in idx_trainval]
-    idx_train, idx_val = train_test_split(
-        idx_trainval,
-        test_size=val_split / (1 - test_split),
-        stratify=targets_trainval,
-        random_state=seed,
-    )
+    # Map each listing (group) to its label and the image indices it owns.
+    group_label: dict[str, int] = {}
+    group_indices: dict[str, list[int]] = defaultdict(list)
+    for i, (path, label) in enumerate(train_base.samples):
+        g = listing_id(path)
+        group_label[g] = label
+        group_indices[g].append(i)
+
+    # Bucket listings by class, then split each class's listings by fraction so
+    # the train/val/test proportions are preserved per class (stratified).
+    by_label: dict[int, list[str]] = defaultdict(list)
+    for g, label in group_label.items():
+        by_label[label].append(g)
+
+    rng = random.Random(seed)
+    idx_train: list[int] = []
+    idx_val: list[int] = []
+    idx_test: list[int] = []
+    for label, groups in by_label.items():
+        groups = sorted(groups)          # deterministic before shuffle
+        rng.shuffle(groups)
+        n = len(groups)
+        n_test = int(round(n * test_split))
+        n_val = int(round(n * val_split))
+        test_g = groups[:n_test]
+        val_g = groups[n_test:n_test + n_val]
+        train_g = groups[n_test + n_val:]
+        for g in test_g:
+            idx_test += group_indices[g]
+        for g in val_g:
+            idx_val += group_indices[g]
+        for g in train_g:
+            idx_train += group_indices[g]
+
+    # Safety: no listing may appear in more than one split.
+    g_train = {listing_id(train_base.samples[i][0]) for i in idx_train}
+    g_val = {listing_id(train_base.samples[i][0]) for i in idx_val}
+    g_test = {listing_id(train_base.samples[i][0]) for i in idx_test}
+    assert not (g_train & g_val) and not (g_train & g_test) and not (g_val & g_test), \
+        "listing leaked across splits — group-aware split is broken"
 
     train_ds = Subset(train_base, idx_train)   # augmented
     val_ds = Subset(eval_base, idx_val)        # deterministic

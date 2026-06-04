@@ -11,26 +11,35 @@ updating the dataset; **[code]** = pipeline/model changes; **[writeup]** = docs/
 
 ---
 
-## ⭐ Tomorrow — ordered checklist
+## ⭐ Current status — where we are
 
-The data-collection pipeline is **already rewired** (see ✅ below). The fastest path
-to a finished project from here:
+The full data + pipeline path is now built and working end-to-end on a **2-class**
+dataset. What remains is mostly a clean training run, more scraping, and the writeup.
 
-1. **Scrape the new data** (§2). Do the 50-item test run in the Apify console first
-   to confirm `categorySlug` filters, then `strat-scrape` for the full multi-model pull.
-2. **Build the dataset:** `strat-prepare --dry-run` to check the class breakdown,
-   then `strat-prepare` to download images. *(labeler is done — §3)*
-3. **[code] Group-aware split** in `data.py` (§4) — the one remaining pipeline fix.
-4. **[code] Re-train** and regenerate results (§5): `strat-train`.
-5. **[writeup] README rewrite** (§6) + **evaluation notebook** (§7).
-6. **[code] Repo cleanup** (§8).
+**✅ Done:**
+1. **Scraper run** (§2) — `strat-scrape` pulled real data; labeling kept **1333 listings:
+   862 stratocaster + 471 telecaster**. The other classes were cut off when **Apify
+   credits ran out** (still need les_paul / sg / es_335 / jazzmaster_jaguar — see §1).
+2. **Labeler** (§3) — `prepare.py` confirmed working: kept 1333, dropped 278
+   (104 too-cheap, 102 parts, 71 wrong-brand, 1 ambiguous). Also fixed so it only
+   creates folders for classes that actually have listings (no phantom empty classes).
+3. **Group-aware split** (§4) — ✅ **DONE.** `build_splits` now splits over *listings*
+   (grouped on the `<listing_id>` filename prefix), stratified per class, with an
+   assertion that no listing leaks across train/val/test. Validated: zero overlap.
+4. **Dataset statistics** — new `stats.py` (`python -m strat_classifier.stats`) reports
+   per-class listings/images + the split breakdown, writes `results/dataset_stats.md`.
 
-**Already done for you:**
-- ✅ `scrape.py` — per-model queries, `categorySlug=electric-guitars`, paginate-until-dry,
-  dedupe by id, real Apify schema (§2).
-- ✅ `prepare.py` — labels by **make/model** from metadata, parts/brand/price filtering,
-  `--dry-run` mode (§3). Dry-run on the *current* data kept 136 Stratocasters and dropped
-  134 junk listings (50 wrong-brand, 47 parts, 37 under $150).
+**⏳ In progress / next:**
+1. **Image download** — `strat-prepare` is downloading images for all 1333 listings
+   (idempotent: re-running skips files already on disk). Let it finish, then run
+   `python -m strat_classifier.stats` for the real counts.
+2. **[code] First training run** (§5): `strat-train` on the 2-class set with the new
+   group-aware split. Expect high accuracy (Strat vs Tele is visually easy) — note
+   in the writeup that it won't fully reflect the eventual 6-class difficulty.
+3. **[data] More scraping** (§1/§2): top up Apify credits and scrape the remaining
+   4 classes to reach the full make/model set.
+4. **[writeup] README rewrite** (§6) + **evaluation notebook** (§7).
+5. **[code] Repo cleanup** (§8).
 
 ---
 
@@ -132,16 +141,18 @@ Still worth doing after the real scrape:
 
 ---
 
-## 4. Fix the train/val/test split — group by listing [code, required]
+## 4. Fix the train/val/test split — group by listing [code] — ✅ DONE
 
-`build_splits()` in `data.py` splits **individual images**, but multiple photos come
-from the **same listing** (`1607482_0/_1/_2` = same guitar, same background). Those
-near-duplicates can land in train *and* test, inflating accuracy.
+`build_splits()` used to split **individual images**, but multiple photos come
+from the **same listing** (`1607482_0/_1/_2` = same guitar, same background), so
+near-duplicates could land in train *and* test and inflate accuracy.
 
-- [ ] Switch to a **group-aware split keyed on the listing id** (the filename prefix
-      before `_`) using `StratifiedGroupKFold` or `GroupShuffleSplit`, so all images
-      of one listing stay in a single split.
-- [ ] Keep the `WeightedRandomSampler` for any residual class imbalance.
+- [x] **Group-aware split keyed on the listing id** (`listing_id()` parses the
+      filename prefix before the trailing `_<idx>`). Within each class, listings are
+      shuffled (seeded) and partitioned by the val/test fractions — so the split is
+      both group-aware *and* stratified. An assertion guards against any listing
+      appearing in more than one split.
+- [x] Kept the `WeightedRandomSampler` for residual class imbalance.
 
 ---
 
@@ -150,6 +161,9 @@ near-duplicates can land in train *and* test, inflating accuracy.
 The model code barely changes — EfficientNet-B0 with an N-way head (N = number of
 classes). `train.py` already handles arbitrary `num_classes`.
 
+- [ ] **First run is 2-class** (stratocaster vs telecaster) until the remaining
+      classes are scraped. Expect high accuracy — call this out as a not-yet-final
+      result, not the headline number.
 - [ ] Re-train on the new dataset; the prior origin results (79%) are **obsolete** —
       regenerate `results/confusion_matrix.png` and `results/training_curves.png`.
 - [ ] Report **overall accuracy + per-class precision/recall/F1** (the existing
@@ -223,8 +237,11 @@ The existing `milestone_dataloader.ipynb` satisfies the **Data Demo** requiremen
 
 ## Suggested order of work
 
-See the **⭐ Tomorrow** checklist at the top. In short: scrape (§2) → prepare (§3,
-done — just run it) → group-aware split (§4, only remaining pipeline code) →
-re-train (§5) → README + eval notebook (§6, §7) → cleanup (§8).
+See the **⭐ Current status** block at the top. In short: pipeline is built and
+validated on 2 classes — what's left is the first training run (§5), scraping the
+remaining 4 classes once credits are topped up (§1/§2), and the writeup (§6, §7) +
+cleanup (§8).
 
-✅ Done: class set (§1), scraper rewrite (§2), metadata labeler (§3), scrape schema (§8).
+✅ Done: class set (§1), scraper rewrite + run → 1333 listings/2 classes (§2),
+metadata labeler + phantom-folder fix (§3), **group-aware split (§4)**,
+dataset statistics (`stats.py`), scrape schema (§8).

@@ -194,7 +194,9 @@ def main(argv=None):
         print("\n(dry run — no images downloaded)")
         return
 
-    for cls in MODEL_PATTERNS:
+    # Only create folders for classes that actually have listings — an empty
+    # folder would become a phantom zero-sample class in ImageFolder.
+    for cls in dist:
         (args.out_dir / cls).mkdir(parents=True, exist_ok=True)
 
     saved = Counter()
