@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strat-classifier"
+version = "0.1.0"
+description = "Fender Stratocaster origin classifier (American/Japanese/Mexican) from listing images."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Jeremy Mitaux" }]
+license = { text = "MIT" }
+dependencies = [
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "scikit-learn>=1.2",
+    "matplotlib>=3.6",
+    "seaborn>=0.12",
+    "numpy>=1.24",
+    "pillow>=9.0",
+]
+
+[project.optional-dependencies]
+scrape = ["apify-client>=1.0"]
+notebook = ["jupyter", "ipykernel"]
+dev = ["jupyter", "ipykernel", "apify-client>=1.0"]
+
+[project.scripts]
+strat-train = "strat_classifier.train:main"
+strat-predict = "strat_classifier.inference:main"
+strat-prepare = "strat_classifier.scraping.prepare:main"
+strat-scrape = "strat_classifier.scraping.scrape:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

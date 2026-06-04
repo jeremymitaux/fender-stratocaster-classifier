@@ -3,10 +3,19 @@ __pycache__/
 *.py[cod]
 *.so
 
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+src/*.egg-info/
+
 # Virtual environments
 venv/
 .venv/
 env/
+
+# Jupyter
+.ipynb_checkpoints/
 
 # OS
 .DS_Store
@@ -14,5 +23,9 @@ env/
 # Claude local settings
 .claude/settings.local.json
 
-# Scraped image dataset (not committed; see README for how to regenerate)
-data/
+# Raw per-listing image dump (regenerated via strat-prepare / scraping.download)
+data/images/
+
+# NOTE: the labeled dataset (data/images_labeled/) and listing metadata
+# (data/json/, data/strats.csv, data/strats_raw.jsonl) ARE committed so the
+# milestone notebook is runnable on a fresh clone.
