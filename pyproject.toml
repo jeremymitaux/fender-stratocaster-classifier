@@ -23,7 +23,8 @@ dependencies = [
 [project.optional-dependencies]
 scrape = ["apify-client>=1.0", "certifi", "pillow-heif>=0.13"]
 notebook = ["jupyter", "ipykernel"]
-dev = ["jupyter", "ipykernel", "apify-client>=1.0", "certifi", "pillow-heif>=0.13"]
+demo = ["gradio>=4.0"]
+dev = ["jupyter", "ipykernel", "apify-client>=1.0", "certifi", "pillow-heif>=0.13", "gradio>=4.0"]
 
 [project.scripts]
 strat-train = "strat_classifier.train:main"
