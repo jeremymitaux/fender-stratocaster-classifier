@@ -35,7 +35,7 @@ ACTOR_ID = "parseforge/reverb-com-scraper"
 # Restrict results to electric guitars. The actor's input accepts `categorySlug`;
 # this is the main lever for filtering out parts/accessories. If a run still comes
 # back full of backplates/tremolo arms, the real filtering happens in prepare.py.
-CATEGORY_SLUG = "guitars"
+CATEGORY_SLUG = "electric-guitars"
 
 PER_PAGE = 100        # page size (max allowed)
 MAX_PAGES = 20        # safety cap per query — 20 × 100 = up to 2k per model

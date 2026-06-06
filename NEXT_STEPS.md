@@ -74,12 +74,15 @@ stratocaster 0.96, telecaster 0.93. Artifacts: `models/best_model.pt`,
 **What we are dropping:** country-of-origin, and **year** (only 44% of listings had
 a usable year, and they were messy free-text like `"2000s?"`).
 
-**Biggest remaining gaps (unchanged by the pivot):**
-1. README is still the proposal — none of the required final sections exist.
-2. No Evaluation Notebook (rubric requires one separate from the data demo).
-3. Train/val/test split leaks images of the same listing across splits.
-4. Dataset is small *and* duplicated — your last pull was 500 rows but only
-   **270 unique listings**.
+**Biggest gaps at the time of the pivot — all now resolved** (see the
+⭐ Current status block above):
+1. ~~README is still the proposal~~ → final README written with every required
+   section; the proposal lives in `PROPOSAL.md`.
+2. ~~No Evaluation Notebook~~ → `notebooks/evaluation.ipynb` added and executed.
+3. ~~Train/val/test split leaks images of the same listing~~ → group-aware split
+   on `listing_id` with a no-leak assertion (§4).
+4. ~~Dataset is small *and* duplicated~~ → full scrape → **1,333 unique listings /
+   6,195 images** across the 2 classes.
 
 ---
 
@@ -242,12 +245,14 @@ The existing `milestone_dataloader.ipynb` satisfies the **Data Demo** requiremen
 
 - [x] **`scrape.py` schema fixed** — now reads the real Apify export (`images` list,
       `brand`, `price` dict) and writes `data/json/scraped_*.json` + a real CSV.
-- [ ] Delete the stale `data/strats_raw.jsonl` (1 line) once the new scrape lands.
-- [ ] Normalize images to JPEG/PNG in `prepare.py` (one stray `.gif` exists; animated
-      GIFs collapse to the first frame).
-- [ ] Map each rubric file requirement to your file (`model.py`, `data.py`,
-      `train.py` are valid "equivalents" of `models.py` / `dataset.py` /
-      `train_models.py` — just say so in the README).
+- [x] Deleted the stale `data/strats_raw.jsonl` (no longer in the repo).
+- [x] **Normalize images to JPEG in `prepare.py`** — `download_image` re-encodes
+      every image to RGB JPEG, so there are no stray HEIC/WebP/GIF files that
+      `ImageFolder` would skip. The on-disk dataset is 100% `.jpg`.
+- [x] **Rubric file mapping** documented in the README's Repository-layout table
+      (`model.py` / `data.py` / `train.py` = `models.py` / `dataset.py` / `train_models.py`).
+- [x] Removed the dead `scraping/download.py` (legacy unlabeled downloader,
+      superseded by `prepare.py`).
 - [ ] Confirm a **fresh-clone install** works: `pip install -e .` then
       `strat-train --epochs 1` on the committed dataset.
 
