@@ -1,4 +1,4 @@
-"""Train the Stratocaster origin classifier (american / japanese / mexican).
+"""Train the guitar make/model classifier (e.g. stratocaster / telecaster).
 
 Dataloaders and transforms live in :mod:`strat_classifier.data`; the model
 lives in :mod:`strat_classifier.model`. This module only owns the training
@@ -128,7 +128,7 @@ def plot_curves(history, save_path):
 
 # --- Main ------------------------------------------------------------------
 def parse_args(argv=None):
-    p = argparse.ArgumentParser(description="Train the Stratocaster origin classifier.")
+    p = argparse.ArgumentParser(description="Train the guitar make/model classifier.")
     p.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     p.add_argument("--model-dir", type=Path, default=MODEL_DIR)
     p.add_argument("--result-dir", type=Path, default=RESULT_DIR)
@@ -160,7 +160,7 @@ def main(argv=None):
     print(f"Classes: {class_names}")
 
     model = build_model(num_classes=len(class_names)).to(DEVICE)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 

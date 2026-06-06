@@ -13,13 +13,21 @@ updating the dataset; **[code]** = pipeline/model changes; **[writeup]** = docs/
 
 ## ⭐ Current status — where we are
 
-The full data + pipeline path is now built and working end-to-end on a **2-class**
-dataset. What remains is mostly a clean training run, more scraping, and the writeup.
+**The 2-class project is complete.** Decision (2026-06-05): ship Stratocaster vs.
+Telecaster as the final scope rather than buying more Apify credits for the other
+4 classes. The full pipeline — scrape → metadata label → group-aware split →
+train → evaluate → writeup — is built, run, and committed.
+
+**🏁 Final result:** EfficientNet-B0, **95.2% test accuracy** (933 held-out
+images), macro-F1 0.95, vs. a 64.2% majority-class baseline. Per-class F1:
+stratocaster 0.96, telecaster 0.93. Artifacts: `models/best_model.pt`,
+`models/class_names.json`, `results/{confusion_matrix,training_curves,example_predictions}.png`.
 
 **✅ Done:**
 1. **Scraper run** (§2) — `strat-scrape` pulled real data; labeling kept **1333 listings:
    862 stratocaster + 471 telecaster**. The other classes were cut off when **Apify
-   credits ran out** (still need les_paul / sg / es_335 / jazzmaster_jaguar — see §1).
+   credits ran out** (potentially need les_paul / sg / es_335 / jazzmaster_jaguar — see §1).
+   Might just make this a 2 type classification if I don't want to buy more API credits tbd. 
 2. **Labeler** (§3) — `prepare.py` confirmed working: kept 1333, dropped 278
    (104 too-cheap, 102 parts, 71 wrong-brand, 1 ambiguous). Also fixed so it only
    creates folders for classes that actually have listings (no phantom empty classes).
@@ -29,17 +37,26 @@ dataset. What remains is mostly a clean training run, more scraping, and the wri
 4. **Dataset statistics** — new `stats.py` (`python -m strat_classifier.stats`) reports
    per-class listings/images + the split breakdown, writes `results/dataset_stats.md`.
 
-**⏳ In progress / next:**
-1. **Image download** — `strat-prepare` is downloading images for all 1333 listings
-   (idempotent: re-running skips files already on disk). Let it finish, then run
-   `python -m strat_classifier.stats` for the real counts.
-2. **[code] First training run** (§5): `strat-train` on the 2-class set with the new
-   group-aware split. Expect high accuracy (Strat vs Tele is visually easy) — note
-   in the writeup that it won't fully reflect the eventual 6-class difficulty.
-3. **[data] More scraping** (§1/§2): top up Apify credits and scrape the remaining
-   4 classes to reach the full make/model set.
-4. **[writeup] README rewrite** (§6) + **evaluation notebook** (§7).
-5. **[code] Repo cleanup** (§8).
+**✅ Done (this session, 2026-06-05):**
+1. **Image download** — `strat-prepare` finished all 1333 listings → 6195 images
+   (3982 strat / 2213 tele). Costs **no API credits** (pulls from Reverb's CDN,
+   not Apify). `python -m strat_classifier.stats` regenerated.
+2. **[code] Training run** (§5): `strat-train` on the 2-class set → 95.2% test acc.
+   `best_model.pt` / `class_names.json` / plots regenerated (the old 3-class
+   origin model is gone).
+3. **[code] Pruned to 2 classes** — `MODEL_PATTERNS` / `ALLOWED_BRANDS` in
+   `prepare.py` and `SEARCH_QUERIES` in `scrape.py` now hold only Strat/Tele.
+4. **[code] Image normalization** (§8) — caught that `ImageFolder` was silently
+   dropping 65 `.heic` files (13 listings). All images re-encoded to JPEG;
+   `prepare.py` now normalizes on download; `pillow-heif` added to extras.
+5. **[writeup] README** (§6) results/stats filled + **evaluation notebook** (§7)
+   executed with outputs.
+
+**⏸️ Deferred (only if scope ever expands):**
+- **[data] More scraping** (§1/§2): top up Apify credits and scrape the remaining
+  4 classes (les_paul / sg / es_335 / jazzmaster_jaguar) to reach the full
+  make/model set. The pipeline already supports N classes — just add the queries
+  back to `scrape.py` and the patterns to `prepare.py`.
 
 ---
 
@@ -219,6 +236,7 @@ The existing `milestone_dataloader.ipynb` satisfies the **Data Demo** requiremen
 (it imports `make_dataloaders` from the dataset module — good).
 
 ---
+
 
 ## 8. Repo / reproducibility cleanup [code]
 

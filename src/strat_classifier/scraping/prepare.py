@@ -24,12 +24,34 @@ Run with::
 """
 
 import argparse
+import io
 import json
 import re
+import ssl
 import time
 import urllib.request
 from collections import Counter
 from pathlib import Path
+
+from PIL import Image
+
+# Reverb's CDN occasionally serves HEIC. PIL can't decode it without the
+# pillow-heif plugin, so register it when available; otherwise HEIC downloads
+# are skipped (logged) rather than crashing. JPEG/PNG/WebP/GIF need no plugin.
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except Exception:
+    pass
+
+# Build an SSL context from certifi's CA bundle if available. python.org builds
+# on macOS don't use the system trust store, so a bare urlopen() raises
+# CERTIFICATE_VERIFY_FAILED on Reverb's image CDN; certifi fixes that cleanly.
+try:
+    import certifi
+    _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:                       # certifi missing → fall back to system default
+    _SSL_CTX = ssl.create_default_context()
 
 JSON_DIR = Path("data/json")
 OUT_DIR = Path("data/images_labeled")
@@ -43,19 +65,19 @@ REQUEST_DELAY = 0.25        # seconds between image downloads
 # ---------------------------------------------------------------------------
 
 # Canonical model -> regex patterns matched against (title + model), lowercased.
-# Word boundaries keep short tokens (sg, 335) from matching inside other words.
+# Word boundaries keep short tokens from matching inside other words.
+# Scope: a 2-class Fender Stratocaster vs Telecaster classifier. (Earlier
+# iterations carried les_paul / sg / es_335 / jazzmaster_jaguar patterns for a
+# planned 6-class set; that was dropped — see PROPOSAL.md / NEXT_STEPS.md.)
 MODEL_PATTERNS: dict[str, list[str]] = {
-    "stratocaster":      [r"stratocaster", r"\bstrat\b"],
-    "telecaster":        [r"telecaster", r"\btele\b"],
-    "les_paul":          [r"les\s*paul"],
-    "sg":                [r"\bsg\b"],
-    "es_335":            [r"es[\s-]*335", r"\b335\b"],
-    "jazzmaster_jaguar": [r"jazzmaster", r"jaguar"],
+    "stratocaster": [r"stratocaster", r"\bstrat\b"],
+    "telecaster":   [r"telecaster", r"\btele\b"],
 }
 
 # A listing's `make` must contain one of these (drops "Unbranded",
-# "Paradox Pickguards", part-seller names, etc.).
-ALLOWED_BRANDS = ["fender", "squier", "gibson", "epiphone"]
+# "Paradox Pickguards", part-seller names, etc.). Strat/Tele are Fender
+# designs, so only Fender and its budget brand Squier are in scope.
+ALLOWED_BRANDS = ["fender", "squier"]
 
 # If any of these appear in title/model, the listing is a part/accessory, not a guitar.
 PART_KEYWORDS = [
@@ -127,17 +149,30 @@ def image_urls(item: dict) -> list[str]:
     return []
 
 
-def download_image(url: str, dest: Path) -> bool:
+def download_image(url: str, dest: Path) -> str:
+    """Download ``url`` and write it to ``dest`` re-encoded as JPEG. Returns
+    ``"exists"`` if already on disk (no network request), ``"ok"`` on a
+    successful fetch, or ``"fail"``.
+
+    Every image is normalized to RGB JPEG so the on-disk dataset is a single
+    format (no stray HEIC/WebP/GIF that ``torchvision.ImageFolder`` would
+    silently skip or that PIL can't open). ``dest`` is expected to end in
+    ``.jpg``. Callers throttle only on a real fetch, so re-runs over an existing
+    dataset are fast (idempotent)."""
     if dest.exists():
-        return True
+        return "exists"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            dest.write_bytes(resp.read())
-        return True
+        with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
+            data = resp.read()
+        # convert("RGB") flattens alpha/palette and takes the first frame of an
+        # animated GIF, so JPEG encoding always succeeds.
+        img = Image.open(io.BytesIO(data)).convert("RGB")
+        img.save(dest, "JPEG", quality=90)
+        return "ok"
     except Exception as exc:
         print(f"  [skip] {url}: {exc}")
-        return False
+        return "fail"
 
 
 # ---------------------------------------------------------------------------
@@ -203,11 +238,15 @@ def main(argv=None):
     for i, (item, lbl) in enumerate(labeled):
         listing_id = item.get("id", f"item_{i}")
         for idx, url in enumerate(image_urls(item)[: args.max_images]):
-            ext = (url.split("?")[0].rsplit(".", 1)[-1] or "jpg").lower()
-            dest = args.out_dir / lbl / f"{listing_id}_{idx}.{ext}"
-            if download_image(url, dest):
+            # Always .jpg: download_image re-encodes every image to JPEG, and a
+            # fixed extension keeps the idempotent "skip if dest exists" check
+            # working regardless of the source URL's format.
+            dest = args.out_dir / lbl / f"{listing_id}_{idx}.jpg"
+            status = download_image(url, dest)
+            if status != "fail":
                 saved[lbl] += 1
-            time.sleep(REQUEST_DELAY)
+            if status == "ok":          # only throttle on a real network fetch
+                time.sleep(REQUEST_DELAY)
         if (i + 1) % 50 == 0:
             print(f"  {i+1}/{len(labeled)} listings  |  images saved: {dict(saved)}")
 

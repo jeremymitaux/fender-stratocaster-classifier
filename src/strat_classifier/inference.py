@@ -1,4 +1,7 @@
-"""Classify a Stratocaster image as american / japanese / mexican.
+"""Classify a guitar listing image into one of the trained make/model classes.
+
+The class list is read from ``models/class_names.json`` (written at train time),
+so this works for any trained class set (e.g. stratocaster / telecaster).
 
 Usage::
 

@@ -41,16 +41,12 @@ PER_PAGE = 100        # page size (max allowed)
 MAX_PAGES = 20        # safety cap per query — 20 × 100 = up to 2k per model
 REQUEST_DELAY = 1.0   # polite delay between API calls (seconds)
 
-# One query per target model. jazzmaster + jaguar both feed the offset-body class.
-# Add/remove queries to match the class set you settle on in NEXT_STEPS.md §1.
+# One query per target model. Scope is the 2-class Stratocaster vs Telecaster
+# set (see PROPOSAL.md / NEXT_STEPS.md). To expand later, add queries here and
+# the matching patterns in prepare.py's MODEL_PATTERNS.
 SEARCH_QUERIES = [
     "fender stratocaster",
     "fender telecaster",
-    "gibson les paul",
-    "gibson sg",
-    "gibson es-335",
-    "fender jazzmaster",
-    "fender jaguar",
 ]
 
 CSV_FIELDS = [

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "strat-classifier"
 version = "0.1.0"
-description = "Fender Stratocaster origin classifier (American/Japanese/Mexican) from listing images."
+description = "Guitar make/model classifier (e.g. Stratocaster vs Telecaster) from Reverb listing images."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Jeremy Mitaux" }]
@@ -21,9 +21,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-scrape = ["apify-client>=1.0"]
+scrape = ["apify-client>=1.0", "certifi", "pillow-heif>=0.13"]
 notebook = ["jupyter", "ipykernel"]
-dev = ["jupyter", "ipykernel", "apify-client>=1.0"]
+dev = ["jupyter", "ipykernel", "apify-client>=1.0", "certifi", "pillow-heif>=0.13"]
 
 [project.scripts]
 strat-train = "strat_classifier.train:main"

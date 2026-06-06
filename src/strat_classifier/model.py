@@ -1,7 +1,7 @@
-"""Model definition for the Stratocaster origin classifier.
+"""Model definition for the guitar make/model classifier.
 
 EfficientNet-B0 pretrained on ImageNet, with the final classifier layer
-replaced to output ``num_classes`` logits.
+replaced to output ``num_classes`` logits (one per guitar model).
 """
 
 import torch.nn as nn

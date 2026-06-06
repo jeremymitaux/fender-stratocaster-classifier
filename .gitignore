@@ -27,5 +27,5 @@ env/
 data/images/
 
 # NOTE: the labeled dataset (data/images_labeled/) and listing metadata
-# (data/json/, data/strats.csv, data/strats_raw.jsonl) ARE committed so the
-# milestone notebook is runnable on a fresh clone.
+# (data/json/, data/strats.csv) ARE committed so the notebooks are runnable
+# on a fresh clone.
