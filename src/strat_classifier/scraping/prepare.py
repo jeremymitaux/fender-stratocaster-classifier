@@ -185,7 +185,8 @@ def load_listings(json_dir: Path) -> list[dict]:
     n_files = 0
     for path in sorted(json_dir.glob("*.json")):
         n_files += 1
-        items = json.load(open(path))
+        with path.open(encoding="utf-8") as f:
+            items = json.load(f)
         if isinstance(items, dict):
             items = [items]
         for item in items:

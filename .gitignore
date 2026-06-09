@@ -20,6 +20,9 @@ env/
 # OS
 .DS_Store
 
+# Microsoft Office lock/owner files (e.g. ~$Presentation.pptx)
+~$*
+
 # Claude local settings
 .claude/settings.local.json
 

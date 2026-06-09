@@ -16,18 +16,16 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 from PIL import Image
-from torchvision import transforms
 
-from strat_classifier.data import IMAGENET_MEAN, IMAGENET_STD, IMG_SIZE
+from strat_classifier.data import build_transforms
 from strat_classifier.model import build_model
 
 MODEL_DIR = Path("models")
 
-TRANSFORM = transforms.Compose([
-    transforms.Resize((IMG_SIZE, IMG_SIZE)),
-    transforms.ToTensor(),
-    transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
-])
+# Reuse the package's deterministic eval transform so inference preprocessing
+# (resize + ImageNet normalization) can never silently drift from what the
+# model saw at train time.
+_, TRANSFORM = build_transforms()
 
 
 def load_model(model_dir: Path = MODEL_DIR):

@@ -143,3 +143,19 @@ not always perfect.
 `model.py`, `data.py`, and `train.py` correspond to the assignment's `models.py`,
 `dataset.py`, and `train_models.py`. Weights and the labeled dataset are committed,
 so the notebooks run on a fresh clone.
+
+## Data and trained weights
+
+Everything needed to reproduce the results is committed to **this GitHub
+repository** — no Talapas paths or external downloads required:
+
+| Artifact | Path (in this repo) |
+|---|---|
+| Labeled image dataset (6,195 images) | `data/images_labeled/<model>/` |
+| Raw scraped listing metadata | `data/json/`, `data/strats.csv` |
+| Trained weights — best by val accuracy (used for all reported results) | `models/best_model.pt` |
+| Final-epoch checkpoint | `models/last_model.pt` |
+| Class ordering used at train time | `models/class_names.json` |
+
+A fresh clone can `pip install -e .` and then run `strat-predict <image>` or open
+either notebook without re-scraping or re-training.

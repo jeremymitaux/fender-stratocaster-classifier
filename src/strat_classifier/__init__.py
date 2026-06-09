@@ -14,6 +14,7 @@ The authoritative class list for a trained model is ``models/class_names.json``
 """
 
 from strat_classifier.data import build_splits, build_transforms, make_dataloaders
+from strat_classifier.inference import load_model, predict
 from strat_classifier.model import build_model
 
 __version__ = "0.1.0"
@@ -25,6 +26,8 @@ __all__ = [
     "build_splits",
     "make_dataloaders",
     "build_model",
+    "load_model",
+    "predict",
     "CLASSES",
     "__version__",
 ]
